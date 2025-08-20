@@ -97,11 +97,22 @@ jobs:
           "dist/AudioVideoMuxer.dmg" \
           "dist/dmg/" || true  # Continue even if DMG creation fails
           
+    - name: Package app for distribution
+      run: |
+        # Create a proper zip archive that preserves the .app structure
+        cd dist
+        zip -r AudioVideoMuxer-macOS.zip AudioVideoMuxer.app
+        
+        # Also create a tar.gz as backup (better preserves permissions)
+        tar -czf AudioVideoMuxer-macOS.tar.gz AudioVideoMuxer.app
+        
     - name: Upload app artifact
       uses: actions/upload-artifact@v4
       with:
         name: AudioVideoMuxer-macOS
-        path: dist/AudioVideoMuxer.app
+        path: |
+          dist/AudioVideoMuxer-macOS.zip
+          dist/AudioVideoMuxer-macOS.tar.gz
         retention-days: 30
         
     - name: Upload DMG artifact (if created)
@@ -118,7 +129,8 @@ jobs:
       with:
         files: |
           dist/AudioVideoMuxer.dmg
-          dist/AudioVideoMuxer.app
+          dist/AudioVideoMuxer-macOS.zip
+          dist/AudioVideoMuxer-macOS.tar.gz
         draft: false
         prerelease: false
       env:
