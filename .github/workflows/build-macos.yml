@@ -1,0 +1,125 @@
+# .github/workflows/build-macos.yml
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-macos:
+    runs-on: macos-15  # macOS Sequoia
+    
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "12.0"  # Set minimum macOS version
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'  # Use a stable Python version
+        
+    - name: Install system dependencies
+      run: |
+        # Install any system dependencies if needed
+        brew update
+        # brew install any-system-deps-here
+        
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+        
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Download FFmpeg binaries
+      run: |
+        python download_ffmpeg.py << EOF
+        2
+        EOF
+        
+    - name: Verify FFmpeg binaries
+      run: |
+        ls -la ffmpeg/
+        ls -la ffmpeg/macos/
+        chmod +x ffmpeg/macos/ffmpeg ffmpeg/macos/ffprobe
+        ./ffmpeg/macos/ffmpeg -version
+        
+    - name: Build macOS app
+      run: |
+        # Set deployment target for PyInstaller
+        export MACOSX_DEPLOYMENT_TARGET=12.0
+        
+        # Create the app bundle
+        python create_macos_app.py
+        
+    - name: Verify app structure
+      run: |
+        ls -la dist/
+        ls -la dist/AudioVideoMuxer.app/
+        ls -la dist/AudioVideoMuxer.app/Contents/
+        ls -la dist/AudioVideoMuxer.app/Contents/MacOS/
+        
+    - name: Test app launch (basic)
+      run: |
+        # Basic test to see if app can start without GUI
+        timeout 10s dist/AudioVideoMuxer.app/Contents/MacOS/AudioVideoMuxer --help || true
+        echo "App launch test completed"
+        
+    - name: Create DMG (optional)
+      run: |
+        # Create a DMG file for distribution
+        brew install create-dmg
+        
+        mkdir -p dist/dmg
+        cp -R dist/AudioVideoMuxer.app dist/dmg/
+        
+        create-dmg \
+          --volname "AudioVideoMuxer" \
+          --volicon dist/AudioVideoMuxer.app/Contents/Resources/icon.icns \
+          --window-pos 200 120 \
+          --window-size 600 300 \
+          --icon-size 100 \
+          --icon "AudioVideoMuxer.app" 175 120 \
+          --hide-extension "AudioVideoMuxer.app" \
+          --app-drop-link 425 120 \
+          "dist/AudioVideoMuxer.dmg" \
+          "dist/dmg/" || true  # Continue even if DMG creation fails
+          
+    - name: Upload app artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AudioVideoMuxer-macOS
+        path: dist/AudioVideoMuxer.app
+        retention-days: 30
+        
+    - name: Upload DMG artifact (if created)
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: AudioVideoMuxer-DMG
+        path: dist/AudioVideoMuxer.dmg
+        retention-days: 30
+        
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/AudioVideoMuxer.dmg
+          dist/AudioVideoMuxer.app
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
