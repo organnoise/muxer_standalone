@@ -61,24 +61,8 @@ jobs:
         # Set deployment target for PyInstaller
         export MACOSX_DEPLOYMENT_TARGET=12.0
         
-        # Optimize PyInstaller for smaller size
-        export PYTHONOPTIMIZE=2
-        
-        # Create the app bundle with size optimizations
+        # Create the app bundle
         python create_macos_app.py
-        
-    - name: Optimize app size
-      run: |
-        # Remove unnecessary files to reduce size
-        find dist/AudioVideoMuxer.app -name "*.pyc" -delete
-        find dist/AudioVideoMuxer.app -name "*.pyo" -delete
-        find dist/AudioVideoMuxer.app -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-        
-        # Remove debug symbols if present
-        find dist/AudioVideoMuxer.app -name "*.dSYM" -exec rm -rf {} + 2>/dev/null || true
-        
-        # Strip binaries (be careful with FFmpeg)
-        find dist/AudioVideoMuxer.app/Contents/MacOS -type f -perm +111 ! -name "ffmpeg" ! -name "ffprobe" -exec strip {} \; 2>/dev/null || true
         
     - name: Verify app structure
       run: |
