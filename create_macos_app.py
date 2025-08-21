@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Improved macOS .app bundle creator with proper compatibility settings
+Create a proper macOS .app bundle for the muxer
 """
 
 import os
@@ -8,15 +8,11 @@ import subprocess
 import sys
 import shutil
 from pathlib import Path
-import platform
 
 def create_app_bundle():
-    """Create a proper .app bundle for macOS with compatibility settings"""
+    """Create a proper .app bundle for macOS"""
     
-    print("Creating macOS .app bundle with compatibility settings...")
-    
-    # Set deployment target
-    os.environ['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
+    print("Creating macOS .app bundle...")
     
     # Clean previous builds
     if os.path.exists("build"):
@@ -24,15 +20,12 @@ def create_app_bundle():
     if os.path.exists("dist"):
         shutil.rmtree("dist")
     
-    # Create improved spec content with compatibility settings
+    # Create the .app bundle using PyInstaller
     spec_content = '''# -*- mode: python ; coding: utf-8 -*-
 import platform
 import os
 
 block_cipher = None
-
-# Set deployment target
-os.environ['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
 
 # FFmpeg binaries for macOS
 binaries = []
@@ -55,38 +48,11 @@ a = Analysis(
         'PyQt5.QtGui', 
         'PyQt5.QtWidgets',
         'PyQt5.sip',
-        'PyQt5.QtPrintSupport',  # Sometimes needed
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'tkinter',
-        'matplotlib',
-        'numpy',
-        'PIL',
-        'scipy',
-        'pandas',
-        'jupyter',
-        'IPython',
-        'nbconvert',
-        'tornado',
-        'zmq',
-        'pygments',
-        'jinja2',
-        'markupsafe',
-        'setuptools',
-        'distutils',
-        'email',
-        'html',
-        'http',
-        'urllib3',
-        'xml',
-        'unittest',
-        'test',
-        'tests',
-        '_testcapi',
-    ],
+    excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -103,14 +69,9 @@ exe = EXE(
     name='AudioVideoMuxer',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,  # Disable stripping to prevent corruption
-    upx=False,    # Disable UPX compression - can cause "damaged" errors
+    strip=False,
+    upx=True,
     console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
 )
 
 coll = COLLECT(
@@ -118,8 +79,8 @@ coll = COLLECT(
     a.binaries,
     a.zipfiles,
     a.datas,
-    strip=False,  # Disable stripping to prevent corruption
-    upx=False,    # Disable UPX to prevent "damaged" errors
+    strip=False,
+    upx=True,
     upx_exclude=[],
     name='AudioVideoMuxer',
 )
@@ -128,62 +89,29 @@ app = BUNDLE(
     coll,
     name='AudioVideoMuxer.app',
     icon=None,
-    bundle_identifier='com.audiovideomuxer.app',
-    version='1.0.0',
+    bundle_identifier='com.yourname.audiovideomuxer',
     info_plist={
-        'CFBundleName': 'AudioVideoMuxer',
-        'CFBundleDisplayName': 'Audio Video Muxer',
-        'CFBundleVersion': '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
-        'CFBundleExecutable': 'AudioVideoMuxer',
-        'CFBundleIdentifier': 'com.audiovideomuxer.app',
         'NSPrincipalClass': 'NSApplication',
         'NSAppleScriptEnabled': False,
-        'NSHighResolutionCapable': True,
-        'NSRequiresAquaSystemAppearance': False,
-        'LSMinimumSystemVersion': '12.0',  # Minimum macOS version
-        'LSApplicationCategoryType': 'public.app-category.video',
         'CFBundleDocumentTypes': [
             {
                 'CFBundleTypeName': 'Video Files',
                 'CFBundleTypeRole': 'Editor',
-                'LSItemContentTypes': [
-                    'public.movie',
-                    'com.apple.quicktime-movie',
-                    'public.mpeg-4'
-                ],
-                'LSHandlerRank': 'Owner'
-            },
-            {
-                'CFBundleTypeName': 'Audio Files', 
-                'CFBundleTypeRole': 'Editor',
-                'LSItemContentTypes': [
-                    'public.audio',
-                    'public.wav-audio'
-                ],
+                'LSItemContentTypes': ['public.movie'],
                 'LSHandlerRank': 'Owner'
             }
-        ],
-        'NSSupportsAutomaticGraphicsSwitching': True,
+        ]
     },
 )
 '''
     
-    # Write the improved spec file
-    with open('macos_compatibility.spec', 'w') as f:
+    # Write the spec file
+    with open('macos_app.spec', 'w') as f:
         f.write(spec_content)
     
     try:
-        # Build the .app bundle with compatibility settings
-        env = os.environ.copy()
-        env['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
-        
-        subprocess.check_call([
-            'pyinstaller', 
-            'macos_compatibility.spec', 
-            '--clean',
-            '--noconfirm'
-        ], env=env)
+        # Build the .app bundle
+        subprocess.check_call(['pyinstaller', 'macos_app.spec', '--clean'])
         
         print("\n✅ macOS .app bundle created successfully!")
         print(f"📁 Location: {os.path.abspath('dist/AudioVideoMuxer.app')}")
@@ -202,24 +130,7 @@ app = BUNDLE(
                 return total_size
             
             size_mb = get_size(app_path) / (1024 * 1024)
-            print(f"📦 App bundle size: {size_mb:.1f} MB")
-            
-            # Verify deployment target
-            executable_path = os.path.join(app_path, 'Contents', 'MacOS', 'AudioVideoMuxer')
-            if os.path.exists(executable_path):
-                try:
-                    result = subprocess.run(['otool', '-l', executable_path], 
-                                          capture_output=True, text=True)
-                    if 'version 12.0' in result.stdout:
-                        print("✅ Deployment target correctly set to macOS 12.0")
-                    else:
-                        print("⚠️  Deployment target may not be set correctly")
-                except:
-                    print("ℹ️  Could not verify deployment target")
-            
-            print("\n📋 Compatibility:")
-            print("✅ Should run on macOS 12.0 (Monterey) and later")
-            print("✅ Built with forward compatibility for newer macOS versions")
+            print(f"📏 App bundle size: {size_mb:.1f} MB")
             
             print("\n📋 Usage:")
             print("1. Double-click AudioVideoMuxer.app to run")
@@ -231,7 +142,6 @@ app = BUNDLE(
             
         else:
             print("❌ App bundle was not created")
-            return False
             
     except subprocess.CalledProcessError as e:
         print(f"❌ Build failed: {e}")
@@ -239,51 +149,17 @@ app = BUNDLE(
     
     return True
 
-def check_build_environment():
-    """Check if the build environment is properly set up"""
-    print("🔍 Checking build environment...")
-    
-    # Check macOS version
+def main():
+    # Check if we're on macOS
     if sys.platform != 'darwin':
-        print("❌ This script must be run on macOS")
-        return False
-    
-    try:
-        result = subprocess.run(['sw_vers', '-productVersion'], 
-                              capture_output=True, text=True)
-        macos_version = result.stdout.strip()
-        print(f"🍎 macOS version: {macos_version}")
-    except:
-        print("⚠️  Could not determine macOS version")
-    
-    # Check Python version
-    python_version = sys.version_info
-    print(f"🐍 Python version: {python_version.major}.{python_version.minor}.{python_version.micro}")
-    
-    if python_version < (3, 8):
-        print("⚠️  Python 3.8+ recommended for best compatibility")
-    
-    # Check PyInstaller
-    try:
-        import PyInstaller
-        print(f"📦 PyInstaller version: {PyInstaller.__version__}")
-    except ImportError:
-        print("❌ PyInstaller not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-    
-    # Check PyQt5
-    try:
-        import PyQt5.QtCore
-        print(f"🖥️  PyQt5 version: {PyQt5.QtCore.PYQT_VERSION_STR}")
-    except ImportError:
-        print("❌ PyQt5 not found")
-        return False
+        print("❌ This script is for macOS only")
+        sys.exit(1)
     
     # Check for FFmpeg binaries
     if not os.path.exists('ffmpeg/macos'):
         print("❌ macOS FFmpeg binaries not found")
         print("Run 'python download_ffmpeg.py' first")
-        return False
+        sys.exit(1)
     
     # Check required files
     required_files = ['ffmpeg/macos/ffmpeg', 'ffmpeg/macos/ffprobe', 'muxer_app_bundled.py']
@@ -291,35 +167,13 @@ def check_build_environment():
     
     if missing:
         print(f"❌ Missing files: {missing}")
-        return False
-    
-    # Make FFmpeg binaries executable
-    os.chmod('ffmpeg/macos/ffmpeg', 0o755)
-    os.chmod('ffmpeg/macos/ffprobe', 0o755)
-    
-    print("✅ Build environment check passed")
-    return True
-
-def main():
-    """Main function"""
-    print("🎬 AudioVideoMuxer macOS App Builder")
-    print("=" * 50)
-    
-    if not check_build_environment():
-        print("\n❌ Build environment check failed. Please fix the issues above.")
         sys.exit(1)
     
     if create_app_bundle():
         print("\n🎉 Success! Your app is ready for distribution.")
         print("\nTo test: Double-click dist/AudioVideoMuxer.app")
-        print("\n📝 Notes:")
-        print("- Built with macOS 12.0 deployment target")
-        print("- Compatible with macOS Monterey (12.0) and later")
-        print("- FFmpeg binaries are bundled")
-        print("- No external dependencies required")
     else:
         print("\n❌ Build failed. Check the error messages above.")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
