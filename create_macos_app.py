@@ -113,8 +113,8 @@ app = BUNDLE(
         # Build the .app bundle
         subprocess.check_call(['pyinstaller', 'macos_app.spec', '--clean'])
         
-        print("\n✅ macOS .app bundle created successfully!")
-        print(f"📁 Location: {os.path.abspath('dist/AudioVideoMuxer.app')}")
+        print("\nâœ… macOS .app bundle created successfully!")
+        print(f"ðŸ“ Location: {os.path.abspath('dist/AudioVideoMuxer.app')}")
         
         # Check if app was created
         app_path = 'dist/AudioVideoMuxer.app'
@@ -130,21 +130,21 @@ app = BUNDLE(
                 return total_size
             
             size_mb = get_size(app_path) / (1024 * 1024)
-            print(f"📏 App bundle size: {size_mb:.1f} MB")
+            print(f"ðŸ“ App bundle size: {size_mb:.1f} MB")
             
-            print("\n📋 Usage:")
+            print("\nðŸ“‹ Usage:")
             print("1. Double-click AudioVideoMuxer.app to run")
             print("2. No terminal window will appear")
             print("3. Distribute the entire .app bundle")
             
-            print("\n🧪 Testing:")
+            print("\nðŸ§ª Testing:")
             print(f"open '{app_path}'")
             
         else:
-            print("❌ App bundle was not created")
+            print("âŒ App bundle was not created")
             
     except subprocess.CalledProcessError as e:
-        print(f"❌ Build failed: {e}")
+        print(f"âŒ Build failed: {e}")
         return False
     
     return True
@@ -152,12 +152,12 @@ app = BUNDLE(
 def main():
     # Check if we're on macOS
     if sys.platform != 'darwin':
-        print("❌ This script is for macOS only")
+        print("âŒ This script is for macOS only")
         sys.exit(1)
     
     # Check for FFmpeg binaries
     if not os.path.exists('ffmpeg/macos'):
-        print("❌ macOS FFmpeg binaries not found")
+        print("âŒ macOS FFmpeg binaries not found")
         print("Run 'python download_ffmpeg.py' first")
         sys.exit(1)
     
@@ -166,14 +166,14 @@ def main():
     missing = [f for f in required_files if not os.path.exists(f)]
     
     if missing:
-        print(f"❌ Missing files: {missing}")
+        print(f"âŒ Missing files: {missing}")
         sys.exit(1)
     
     if create_app_bundle():
-        print("\n🎉 Success! Your app is ready for distribution.")
+        print("\nðŸŽ‰ Success! Your app is ready for distribution.")
         print("\nTo test: Double-click dist/AudioVideoMuxer.app")
     else:
-        print("\n❌ Build failed. Check the error messages above.")
+        print("\nâŒ Build failed. Check the error messages above.")
 
 if __name__ == "__main__":
     main()
