@@ -103,8 +103,8 @@ exe = EXE(
     name='AudioVideoMuxer',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,  # Enable stripping for smaller size
-    upx=True,   # Enable UPX compression
+    strip=False,  # Disable stripping to prevent corruption
+    upx=False,    # Disable UPX compression - can cause "damaged" errors
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -118,9 +118,9 @@ coll = COLLECT(
     a.binaries,
     a.zipfiles,
     a.datas,
-    strip=True,  # Enable stripping in COLLECT too
-    upx=True,
-    upx_exclude=['ffmpeg', 'ffprobe'],  # Don't compress FFmpeg binaries
+    strip=False,  # Disable stripping to prevent corruption
+    upx=False,    # Disable UPX to prevent "damaged" errors
+    upx_exclude=[],
     name='AudioVideoMuxer',
 )
 
